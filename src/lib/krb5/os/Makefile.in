@@ -245,10 +245,14 @@ check-unix-uri: t_locate_kdc
 	fi
 
 check-unix-trace: t_trace
-	rm -f t_trace.out
+	rm -f t_trace.out ; \
 	KRB5_TRACE=t_trace.out ; export KRB5_TRACE ; \
-	$(RUN_TEST) ./t_trace
-	sed -e 's/^[^:]*: //' t_trace.out | cmp - $(srcdir)/t_trace.ref
+	$(RUN_TEST) ./t_trace ; \
+	if [[ "$(shell uname)" == 'Haiku' ]]; then \
+		sed -e 's/^[^:]*: //' t_trace.out | cmp - $(srcdir)/t_trace_haiku.ref ; \
+	else \
+		sed -e 's/^[^:]*: //' t_trace.out | cmp - $(srcdir)/t_trace.ref ; \
+	fi; \
 	rm -f t_trace.out
 
 check-unix-expand: t_expand_path
