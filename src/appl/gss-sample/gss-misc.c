@@ -119,7 +119,16 @@ read_all(int fildes, void *data, unsigned int nbyte)
     tv.tv_usec = 0;
 
     for (ptr = buf; nbyte; ptr += ret, nbyte -= ret) {
+#ifndef __HAIKU__
         if (select(FD_SETSIZE, &rfds, NULL, NULL, &tv) <= 0
+#else
+        // On Haiku, FD_SETSIZE is 1024:
+        // (https://xref.landonf.org/source/xref/haiku/headers/posix/sys/select.h#24)
+        // but select checks for nfds <= table_size, which is
+        // usually DEFAULT_FD_TABLE_SIZE, or 256:
+        // https://xref.landonf.org/source/xref/haiku/headers/private/kernel/vfs.h#27
+        if (select(256, &rfds, NULL, NULL, &tv) <= 0
+#endif
             || !FD_ISSET(fildes, &rfds))
             return (ptr - buf);
         ret = recv(fildes, ptr, nbyte, 0);

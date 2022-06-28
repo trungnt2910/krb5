@@ -146,6 +146,9 @@ svctcp_create(
 	struct sockaddr_storage ss;
 	struct sockaddr *sa = (struct sockaddr *)&ss;
 	socklen_t len;
+#ifdef __HAIKU__
+	bool_t sock_already_bound = FALSE;
+#endif
 
 	if (sock == RPC_ANYSOCK) {
 		if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
@@ -162,9 +165,30 @@ svctcp_create(
 			perror("svc_tcp.c - cannot getsockname");
 			return ((SVCXPRT *)NULL);
 		}
+#ifdef __HAIKU__
+		switch (sa->sa_family) {
+			case AF_INET:
+				struct sockaddr_in *sin = (struct sockaddr_in *)sa;
+				if (sin->sin_port != 0)
+					sock_already_bound = TRUE;
+				break;
+			case AF_INET6:
+				struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sa;
+				if (sin6->sin6_port != 0)
+					sock_already_bound = TRUE;
+				break;
+		}
+#endif
 	}
 
+#ifndef __HAIKU__
 	if (bindresvport_sa(sock, sa)) {
+#else
+	// In Haiku, bind() does not fail if the socket is already bound,
+	// but unbinds and rebinds the socket. This is problematic
+	// for sockets that are already bound to a specific port.
+	if (!sock_already_bound && bindresvport_sa(sock, sa)) {
+#endif
 		sa_setport(sa, 0);
 		(void)bind(sock, sa, sa_socklen(sa));
 	}

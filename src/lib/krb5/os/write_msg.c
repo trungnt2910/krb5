@@ -45,6 +45,9 @@ k5_write_messages(krb5_context context, krb5_pointer fdp, krb5_data *outbuf,
         int nbufs1;
         sg_buf sg[4];
         krb5_int32 len[2];
+#ifdef __HAIKU__
+        char empty_buf[1];
+#endif
 
         if (nbufs > 1)
             nbufs1 = 2;
@@ -52,12 +55,22 @@ k5_write_messages(krb5_context context, krb5_pointer fdp, krb5_data *outbuf,
             nbufs1 = 1;
         len[0] = htonl(outbuf[0].length);
         SG_SET(&sg[0], &len[0], 4);
+#ifndef __HAIKU__
         SG_SET(&sg[1], outbuf[0].length ? outbuf[0].data : NULL,
+#else
+        // See https://xref.landonf.org/source/xref/haiku/src/system/kernel/fs/socket.cpp#165
+        // Many functions in Haiku does not support NULL for iovec.
+        SG_SET(&sg[1], outbuf[0].length ? outbuf[0].data : empty_buf,
+#endif
                outbuf[0].length);
         if (nbufs1 == 2) {
             len[1] = htonl(outbuf[1].length);
             SG_SET(&sg[2], &len[1], 4);
+#ifndef __HAIKU__
             SG_SET(&sg[3], outbuf[1].length ? outbuf[1].data : NULL,
+#else
+            SG_SET(&sg[3], outbuf[1].length ? outbuf[1].data : empty_buf,
+#endif
                    outbuf[1].length);
         }
         if (krb5int_net_writev(context, fd, sg, nbufs1 * 2) < 0) {

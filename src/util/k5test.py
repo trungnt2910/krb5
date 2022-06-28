@@ -863,7 +863,12 @@ def _stop_daemons():
     global _daemons
     daemon_error = False
     for proc in _daemons:
-        os.kill(proc.pid, signal.SIGTERM)
+        try:
+            os.kill(proc.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            # The daemon already exited.
+            # This happens for uuserver on Haiku.
+            pass
         code = _check_daemon(proc)
         if code != 0:
             daemon_error = True
