@@ -40,6 +40,9 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+#ifdef __HAIKU__
+#include "fake-addrinfo.h" /* Haiku has a buggy gethostbyname. */
+#endif
 
 #include "simple.h"
 

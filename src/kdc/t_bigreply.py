@@ -1,4 +1,5 @@
 from k5test import *
+import platform
 import struct
 
 # Set the maximum UDP reply size very low, so that all replies go
@@ -19,7 +20,7 @@ realm.run([kvno, realm.host_princ], expected_trace=msgs)
 # Pretend to send an absurdly long request over TCP, and verify that
 # we get back a reply of plausible length to be an encoded
 # KRB_ERR_RESPONSE_TOO_BIG error.
-s = socket.create_connection((hostname, realm.portbase))
+s = socket.create_connection((hostname if platform.system() != 'Haiku' else (hostname if socket.gethostname() != hostname else 'localhost'), realm.portbase))
 s.sendall(b'\xFF\xFF\xFF\xFF')
 lenbytes = s.recv(4)
 assert(len(lenbytes) == 4)

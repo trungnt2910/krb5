@@ -33,6 +33,10 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#ifdef __HAIKU__
+#include "fake-addrinfo.h" /* Haiku has a buggy gethostbyname. */
+#endif
+
 int main (int argc, char *argv[])
 {
     int s;

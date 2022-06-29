@@ -69,6 +69,28 @@
 #include "gss-misc.h"
 #include "port-sockets.h"
 
+#ifdef __HAIKU__
+#include <limits.h>
+static struct hostent *
+haiku_gethostbyname(const char *name)
+{
+    char local_hostname[HOST_NAME_MAX + 1];
+
+    if (name != NULL) {
+        if (gethostname(local_hostname, sizeof(local_hostname)) < 0) {
+            return NULL;
+        }
+        if (strcmp(name, local_hostname) == 0) {
+            name = "localhost";
+        }
+    }
+
+    return gethostbyname(name);
+}
+#undef gethostbyname
+#define gethostbyname haiku_gethostbyname
+#endif
+
 static int verbose = 1;
 static int spnego = 0;
 static gss_OID_desc gss_spnego_mechanism_oid_desc =

@@ -1,4 +1,5 @@
 import base64
+import platform
 import socket
 from k5test import *
 
@@ -9,7 +10,7 @@ realm = K5Realm()
 # from failures in decode_krb5_as_req() and decode_krb5_tgs_req().
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-a = (hostname, realm.portbase)
+a = (hostname if platform.system() != 'Haiku' else (hostname if socket.gethostname() != hostname else 'localhost'), realm.portbase)
 
 
 # Bogus AS-REQ

@@ -220,6 +220,10 @@ extern int krb5int_getnameinfo (const struct sockaddr *sa, socklen_t salen,
                                 char *hbuf, size_t hbuflen,
                                 char *sbuf, size_t sbuflen,
                                 int flags);
+#ifdef __HAIKU__
+extern struct hostent *krb5int_gethostbyname(const char *name);
+#endif
+
 #ifndef IMPLEMENT_FAKE_GETADDRINFO
 #undef  getaddrinfo
 #define getaddrinfo krb5int_getaddrinfo
@@ -229,6 +233,10 @@ extern int krb5int_getnameinfo (const struct sockaddr *sa, socklen_t salen,
 #define gai_strerror krb5int_gai_strerror
 #undef  getnameinfo
 #define getnameinfo krb5int_getnameinfo
+#ifdef __HAIKU__
+#undef  gethostbyname
+#define gethostbyname krb5int_gethostbyname
+#endif // __HAIKU__
 #endif
 
 #endif /* FAI_DEFINED */

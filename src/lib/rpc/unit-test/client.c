@@ -20,6 +20,10 @@
 #include <gssrpc/auth_gssapi.h>
 #include "rpc_test.h"
 
+#ifdef __HAIKU__
+#include <limits.h>
+#endif
+
 #define BIG_BUF 4096
 /* copied from auth_gssapi.c for hackery */
 struct auth_gssapi_data {
@@ -67,6 +71,9 @@ main(argc, argv)
      struct sockaddr_in sin;
      struct hostent *h;
      struct timeval tv;
+#ifdef __HAIKU__
+     char local_hostname[HOST_NAME_MAX + 1];
+#endif
 
      extern int krb5_gss_dbg_client_expcreds;
      krb5_gss_dbg_client_expcreds = 1;
@@ -124,6 +131,17 @@ main(argc, argv)
      }
 
      /* get server address */
+#ifdef __HAIKU__
+     if (host != NULL) {
+          if (gethostname(local_hostname, sizeof(local_hostname)) < 0) {
+               perror("gethostname");
+               exit(1);
+          }
+          if (strcmp(host, local_hostname) == 0) {
+               host = "localhost";
+          }
+     }
+#endif
      h = gethostbyname(host);
      if (h == NULL) {
 	 fprintf(stderr, "Can't resolve hostname %s\n", host);

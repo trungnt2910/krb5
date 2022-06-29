@@ -136,9 +136,16 @@ extern /*@dependent@*/ char *gai_strerror (int code) /*@*/;
 
 #include "cache-addrinfo.h"
 
-#if (defined (__linux__) && defined(HAVE_GETADDRINFO)) || defined (_AIX)
+#if (defined (__linux__) && defined(HAVE_GETADDRINFO)) || defined (_AIX) || defined(__HAIKU__)
 /* See comments below.  */
 #  define WRAP_GETADDRINFO
+#endif
+
+#ifdef __HAIKU__
+# include <limits.h>            /* HOST_NAME_MAX */
+# include <netdb.h>             /* gethostbyname */
+# include <string.h>            /* strcmp */
+# include <unistd.h>            /* gethostname */
 #endif
 
 #if defined (__linux__) && defined(HAVE_GETADDRINFO)
@@ -348,6 +355,17 @@ system_freeaddrinfo (struct addrinfo *ai)
 #define gai_strerror    my_fake_gai_strerror
 
 #endif /* ! HAVE_GETADDRINFO */
+
+#ifdef __HAIKU__
+static inline struct hostent *
+system_gethostbyname (const char *name)
+{
+    return gethostbyname(name);
+}
+
+#undef gethostbyname
+#define gethostbyname    my_fake_gethostbyname
+#endif
 
 #if (!defined (HAVE_GETADDRINFO) || defined (WRAP_GETADDRINFO)) && defined(DEBUG_ADDRINFO)
 /* Some debug routines.  */
@@ -1098,6 +1116,10 @@ getaddrinfo (const char *name, const char *serv, const struct addrinfo *hint,
     int service_port = 0;
     int socket_type = 0;
 #endif
+#ifdef __HAIKU__
+    // One for the null.
+    char local_hostname[HOST_NAME_MAX + 1];
+#endif
 
 #ifdef DEBUG_ADDRINFO
     debug_dump_getaddrinfo_args(name, serv, hint);
@@ -1128,6 +1150,15 @@ getaddrinfo (const char *name, const char *serv, const struct addrinfo *hint,
             if (hint)
                 socket_type = hint->ai_socktype;
         }
+    }
+#endif
+
+#ifdef __HAIKU__
+    if (name != NULL) {
+        if (gethostname(local_hostname, sizeof(local_hostname)) < 0)
+            return EAI_SYSTEM;
+        if (strcmp(name, local_hostname) == 0)
+            name = "localhost";
     }
 #endif
 
@@ -1298,6 +1329,26 @@ void freeaddrinfo (struct addrinfo *ai)
 }
 #endif /* WRAP_GETADDRINFO */
 
+#ifdef __HAIKU__
+static inline
+struct hostent *
+gethostbyname (const char *name)
+{
+    char local_hostname[HOST_NAME_MAX + 1];
+
+    if (name != NULL) {
+        if (gethostname(local_hostname, sizeof(local_hostname)) < 0) {
+            return NULL;
+        }
+        if (strcmp(name, local_hostname) == 0) {
+            name = "localhost";
+        }
+    }
+
+    return system_gethostbyname(name);
+}
+#endif
+
 #ifdef FAI_CACHE
 static int krb5int_lock_fac (void)
 {
@@ -1341,3 +1392,10 @@ int krb5int_getnameinfo (const struct sockaddr *sa, socklen_t salen,
 {
     return getnameinfo(sa, salen, hbuf, hbuflen, sbuf, sbuflen, flags);
 }
+
+#ifdef __HAIKU__
+struct hostent *krb5int_gethostbyname (const char *name)
+{
+    return gethostbyname(name);
+}
+#endif
